@@ -1,0 +1,9 @@
+{
+  "name": "planet-war",
+  "version": "1.0.0",
+  "description": "방 코드로 모여서 하는 행성 점령 실시간 전략 게임 (오라룩스 스타일)",
+  "main": "server.js",
+  "scripts": { "start": "node server.js" },
+  "engines": { "node": ">=18" },
+  "dependencies": { "express": "^4.21.2", "socket.io": "^4.8.1" }
+}

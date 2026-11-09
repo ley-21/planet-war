@@ -1,0 +1,600 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>행성 점령전 🪐</title>
+<style>
+  :root {
+    --bg: #05060d; --panel: #11142a; --panel2: #1a1f3d; --line: #2a3060;
+    --text: #e9ecff; --muted: #8c93c2; --accent: #8fb4ff; --accent2: #ffd36e; --danger: #ff6b85; --ok: #6ff0b4;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; overflow: hidden; background: var(--bg); color: var(--text);
+    font-family: system-ui, -apple-system, "Apple SD Gothic Neo", "Malgun Gothic", sans-serif; }
+  button { font: inherit; cursor: pointer; border: none; }
+  input { font: inherit; }
+  .screen { position: fixed; inset: 0; display: none; align-items: center; justify-content: center; padding: 20px; }
+  .screen.on { display: flex; }
+  .stars { position: fixed; inset: 0; pointer-events: none;
+    background-image: radial-gradient(1px 1px at 10% 20%, #fff8, transparent), radial-gradient(1px 1px at 70% 40%, #fff6, transparent),
+      radial-gradient(1.5px 1.5px at 40% 80%, #fff7, transparent), radial-gradient(1px 1px at 85% 75%, #fff5, transparent),
+      radial-gradient(1px 1px at 25% 60%, #fff6, transparent), radial-gradient(1.5px 1.5px at 55% 15%, #fff8, transparent),
+      radial-gradient(circle at 30% 30%, #1a1f4a55, transparent 50%), radial-gradient(circle at 75% 70%, #3a1a4a44, transparent 50%); }
+  .card { position: relative; width: 100%; max-width: 420px; background: var(--panel); border: 1px solid var(--line);
+    border-radius: 20px; padding: 28px; box-shadow: 0 20px 60px rgba(0,0,0,.5); }
+  .logo { font-size: 32px; font-weight: 900; text-align: center; letter-spacing: -1px; }
+  .logo span { color: var(--accent); }
+  .sub { text-align: center; color: var(--muted); margin: 6px 0 22px; font-size: 14px; }
+  label { display: block; font-size: 13px; color: var(--muted); margin: 14px 0 6px; font-weight: 600; }
+  .field { width: 100%; padding: 14px 16px; border-radius: 12px; border: 2px solid var(--line); background: var(--bg);
+    color: var(--text); font-size: 18px; outline: none; }
+  .field:focus { border-color: var(--accent); }
+  .code-field { font-size: 28px; letter-spacing: 10px; text-align: center; font-weight: 800; }
+  .row { display: flex; gap: 10px; }
+  .btn { width: 100%; padding: 15px; border-radius: 12px; font-weight: 800; font-size: 17px; transition: transform .08s; }
+  .btn:active { transform: scale(.97); }
+  .btn-main { background: var(--accent); color: #0a1430; margin-top: 18px; }
+  .btn-sub { background: var(--panel2); color: var(--text); border: 1px solid var(--line); }
+  .btn-small { width: auto; padding: 8px 12px; font-size: 13px; border-radius: 9px; }
+  .err { color: var(--danger); font-size: 14px; min-height: 20px; margin-top: 10px; text-align: center; }
+  .hint { color: var(--muted); font-size: 12.5px; margin-top: 12px; line-height: 1.7; text-align: center; }
+  .lobby { max-width: 720px; }
+  .lobby-top { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+  .room-code { font-size: 13px; color: var(--muted); font-weight: 700; }
+  .room-code b { display: block; font-size: 36px; color: var(--accent2); letter-spacing: 6px; }
+  .count { font-size: 15px; color: var(--muted); font-weight: 700; }
+  .count b { color: var(--text); font-size: 22px; }
+  .mode { margin-top: 14px; padding: 10px 14px; border-radius: 10px; background: var(--bg); color: var(--muted); font-size: 13.5px; text-align: center; }
+  .mode b { color: var(--text); }
+  .plist { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 8px; margin: 14px 0;
+    max-height: 42vh; overflow-y: auto; }
+  .pl { display: flex; align-items: center; gap: 8px; padding: 10px 12px; border-radius: 11px; background: var(--bg);
+    border: 2px solid var(--line); font-weight: 700; font-size: 14px; min-width: 0; }
+  .pl.ready { border-color: var(--ok); background: #0d2a24; }
+  .pl .dot { width: 14px; height: 14px; border-radius: 50%; flex: none; }
+  .pl .nm { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .pl .st { font-size: 12px; color: var(--muted); }
+  .pl.ready .st { color: var(--ok); }
+  .pl.me .nm::after { content: " (나)"; color: var(--muted); font-weight: 500; }
+  .status { text-align: center; color: var(--muted); font-size: 14px; margin-bottom: 12px; min-height: 20px; }
+  .btn-ready { background: var(--panel2); color: var(--text); border: 2px solid var(--ok); font-size: 20px; padding: 18px; }
+  .btn-ready.on { background: var(--ok); color: #062417; }
+  .countdown { position: fixed; inset: 0; display: none; align-items: center; justify-content: center; z-index: 50;
+    background: rgba(3,4,10,.6); pointer-events: none; }
+  .countdown.on { display: flex; }
+  .countdown b { font-size: 180px; font-weight: 900; color: var(--accent2); text-shadow: 0 0 40px rgba(255,211,110,.6); animation: pop .9s ease-out; }
+  @keyframes pop { from { transform: scale(1.8); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+
+  #game { padding: 0; }
+  #cv { position: absolute; inset: 0; width: 100%; height: 100%; touch-action: none; display: block; }
+  .hud { position: absolute; pointer-events: none; font-weight: 800; text-shadow: 0 2px 6px rgba(0,0,0,.8); }
+  .hud-time { top: 14px; left: 50%; transform: translateX(-50%); font-size: 20px; background: rgba(10,12,28,.65); padding: 4px 14px; border-radius: 10px; font-variant-numeric: tabular-nums; }
+  .hud-players { top: 14px; right: 14px; width: 200px; background: rgba(10,12,28,.65); border-radius: 12px; padding: 10px 12px; font-size: 13px; max-height: 60vh; overflow: hidden; }
+  .hud-players h4 { font-size: 12px; color: var(--muted); margin-bottom: 4px; }
+  .pr { display: flex; align-items: center; gap: 6px; padding: 2px 0; }
+  .pr .d { width: 10px; height: 10px; border-radius: 50%; flex: none; }
+  .pr .n { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .pr.dead { opacity: .35; text-decoration: line-through; }
+  .pr.me .n { color: var(--accent2); }
+  .hud-help { left: 14px; bottom: 14px; font-size: 12.5px; font-weight: 600; color: var(--muted); line-height: 1.7;
+    background: rgba(10,12,28,.6); padding: 8px 12px; border-radius: 10px; }
+  .hud-me { top: 14px; left: 14px; font-size: 14px; line-height: 1.7; }
+  .hud-me .big { font-size: 24px; }
+  .feed { position: absolute; top: 56px; left: 50%; transform: translateX(-50%); display: flex; flex-direction: column; align-items: center; gap: 4px; pointer-events: none; }
+  .feed div { background: rgba(10,12,28,.75); padding: 5px 12px; border-radius: 8px; font-size: 13px; font-weight: 700; }
+  .banner { position: absolute; bottom: 60px; left: 50%; transform: translateX(-50%); display: none; pointer-events: none;
+    background: rgba(255,107,133,.18); border: 2px solid var(--danger); padding: 12px 22px; border-radius: 14px; font-weight: 800; font-size: 18px; text-align: center; }
+  .banner small { display: block; font-size: 13px; color: var(--muted); margin-top: 4px; font-weight: 600; }
+  .fit-btn { position: absolute; right: 14px; bottom: 14px; }
+  @media (max-width: 640px) { .hud-players { width: 140px; font-size: 11.5px; } .hud-help { display: none; } }
+
+  .overlay { position: fixed; inset: 0; z-index: 60; display: none; align-items: center; justify-content: center; background: rgba(3,4,10,.78); padding: 20px; }
+  .overlay.on { display: flex; }
+  .result-title { text-align: center; font-size: 26px; font-weight: 900; margin-bottom: 4px; }
+  .result-sub { text-align: center; color: var(--muted); font-size: 14px; margin-bottom: 16px; }
+  .rank-list { max-height: 50vh; overflow-y: auto; }
+  .rk { display: flex; align-items: center; gap: 10px; padding: 9px 10px; border-radius: 10px; font-weight: 700; }
+  .rk:nth-child(odd) { background: var(--bg); }
+  .rk.me { outline: 2px solid var(--accent2); }
+  .rk .no { width: 34px; text-align: center; font-size: 18px; }
+  .rk .nm { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .rk .sc { font-size: 13px; color: var(--muted); }
+  .toast { position: fixed; top: 20px; left: 50%; transform: translateX(-50%); background: var(--danger); color: #fff;
+    padding: 10px 18px; border-radius: 10px; font-weight: 700; z-index: 100; display: none; }
+</style>
+</head>
+<body>
+<div class="stars"></div>
+
+<section class="screen on" id="home">
+  <div class="card">
+    <div class="logo">행성 <span>점령전</span> 🪐</div>
+    <div class="sub">유닛을 모아 행성을 차지하고 상대를 몰아내세요!</div>
+    <label for="nameIn">닉네임</label>
+    <input class="field" id="nameIn" maxlength="12" placeholder="예: 김철수" autocomplete="off">
+    <label for="codeIn">방 코드 (숫자 6자리)</label>
+    <input class="field code-field" id="codeIn" maxlength="6" inputmode="numeric" placeholder="000000" autocomplete="off">
+    <div class="row" style="margin-top:10px"><button class="btn btn-sub btn-small" id="randBtn" style="width:100%">🎲 새 방 코드 만들기</button></div>
+    <button class="btn btn-main" id="joinBtn">입장하기</button>
+    <div class="err" id="homeErr"></div>
+    <div class="hint">같은 코드를 입력한 사람끼리 같은 방에 들어가요. (최대 30명)<br>혼자 시작하면 AI와 1:1 대결이에요.</div>
+  </div>
+</section>
+
+<section class="screen" id="lobby">
+  <div class="card lobby">
+    <div class="lobby-top">
+      <div class="room-code">방 코드 <b id="lobbyCode">------</b></div>
+      <div style="text-align:right">
+        <div class="count"><b id="readyCount">0</b> / <span id="playerCount">0</span>명 준비완료</div>
+        <div class="row" style="margin-top:8px;justify-content:flex-end">
+          <button class="btn btn-sub btn-small" id="copyBtn">코드 복사</button>
+          <button class="btn btn-sub btn-small" id="leaveBtn">나가기</button>
+        </div>
+      </div>
+    </div>
+    <div class="mode" id="modeText"></div>
+    <div class="plist" id="plist"></div>
+    <div class="status" id="lobbyStatus"></div>
+    <button class="btn btn-ready" id="readyBtn">준비완료</button>
+  </div>
+</section>
+
+<section class="screen" id="game">
+  <canvas id="cv"></canvas>
+  <div class="hud hud-me" id="hudMe"></div>
+  <div class="hud hud-time" id="hTime">10:00</div>
+  <div class="hud hud-players"><h4>플레이어 · 행성 · 유닛</h4><div id="plBox"></div></div>
+  <div class="hud hud-help">🖱️ 드래그로 동그라미 그려서 유닛 선택 → 목적지 행성 클릭<br>내 행성 클릭 = 그 행성 유닛 전부 선택 · 휠 = 확대/축소 · 우클릭 드래그 = 이동</div>
+  <div class="feed" id="feed"></div>
+  <div class="banner" id="banner">💥 탈락!<small>남은 사람들의 경기를 관전 중이에요</small></div>
+  <button class="btn btn-sub btn-small fit-btn" id="fitBtn">전체 보기</button>
+</section>
+
+<div class="countdown" id="countdown"><b id="cdNum">3</b></div>
+<div class="overlay" id="results">
+  <div class="card" style="max-width:480px">
+    <div class="result-title" id="resTitle">게임 종료</div>
+    <div class="result-sub" id="resSub"></div>
+    <div class="rank-list" id="rankList"></div>
+    <button class="btn btn-main" id="resOk">대기실로</button>
+  </div>
+</div>
+<div class="toast" id="toast"></div>
+
+<script src="/socket.io/socket.io.js"></script>
+<script>
+(() => {
+'use strict';
+const $ = (id) => document.getElementById(id);
+const socket = io({ transports: ['websocket', 'polling'] });
+const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+
+// 서버와 같은 규칙값 (화면 표시용)
+const capCost = (size) => [0, 10, 15, 20][size];
+const upCost = (level) => 10 * (level + 1);
+const hpMax = (level) => 5 + 10 * level;
+
+let myId = null, myCode = null, lobby = null, inGame = false;
+let G = null;            // { planets:[{id,x,y,size,r}], players:[...], myPi }
+let state = null, prevFleets = new Map(), stateTime = 0;
+
+function show(id) { for (const s of document.querySelectorAll('.screen')) s.classList.toggle('on', s.id === id); }
+function toast(msg) { const t = $('toast'); t.textContent = msg; t.style.display = 'block'; clearTimeout(toast._t); toast._t = setTimeout(() => t.style.display = 'none', 3000); }
+
+// ───── 시작 화면 ─────
+try { $('nameIn').value = localStorage.getItem('pw_name') || ''; } catch (e) {}
+$('codeIn').addEventListener('input', (e) => { e.target.value = e.target.value.replace(/\D/g, '').slice(0, 6); });
+$('randBtn').onclick = () => { $('codeIn').value = String(Math.floor(Math.random() * 900000) + 100000); };
+$('joinBtn').onclick = join;
+$('codeIn').addEventListener('keydown', (e) => { if (e.key === 'Enter') join(); });
+$('nameIn').addEventListener('keydown', (e) => { if (e.key === 'Enter') $('codeIn').focus(); });
+function join() {
+  const name = $('nameIn').value.trim(), code = $('codeIn').value.trim();
+  if (!name) { $('homeErr').textContent = '닉네임을 입력해 주세요.'; return; }
+  if (!/^\d{6}$/.test(code)) { $('homeErr').textContent = '방 코드는 숫자 6자리예요.'; return; }
+  try { localStorage.setItem('pw_name', name); } catch (e) {}
+  $('homeErr').textContent = '';
+  socket.emit('join', { name, code }, (res) => {
+    if (!res || !res.ok) { $('homeErr').textContent = (res && res.error) || '입장에 실패했어요.'; return; }
+    myId = res.id; myCode = res.code;
+    if (!inGame) show('lobby');
+  });
+}
+
+// ───── 대기실 ─────
+$('readyBtn').onclick = () => { if (!lobby) return; const me = lobby.players.find((p) => p.id === myId); socket.emit('ready', !(me && me.ready)); };
+$('leaveBtn').onclick = () => { socket.emit('leave'); myCode = null; lobby = null; show('home'); };
+$('copyBtn').onclick = async () => {
+  try { await navigator.clipboard.writeText(myCode); $('copyBtn').textContent = '복사됨!'; } catch (e) { $('copyBtn').textContent = myCode; }
+  setTimeout(() => $('copyBtn').textContent = '코드 복사', 1500);
+};
+socket.on('lobby', (l) => {
+  lobby = l;
+  $('lobbyCode').textContent = l.code;
+  const ps = l.players, readyN = ps.filter((p) => p.ready).length;
+  $('readyCount').textContent = readyN;
+  $('playerCount').textContent = ps.length + ' / ' + l.max;
+  $('modeText').innerHTML = ps.length === 1 ? '<b>1명</b> · 일직선 행성 5개에서 <b>AI와 대결</b>'
+    : ps.length === 2 ? '<b>2명</b> · 일직선 행성 5개에서 <b>1:1 대결</b>'
+    : `<b>${ps.length}명</b> · 중앙 행성을 둘러싼 <b>${ps.length}각형</b> 배치의 개인전`;
+  $('plist').innerHTML = ps.map((p) => `
+    <div class="pl ${p.ready ? 'ready' : ''} ${p.id === myId ? 'me' : ''}">
+      <span class="dot" style="background:hsl(${p.hue},90%,65%);box-shadow:0 0 8px hsl(${p.hue},90%,65%)"></span>
+      <span class="nm">${esc(p.name)}</span><span class="st">${p.waiting ? '관전중' : p.ready ? '✔ 준비' : '대기'}</span>
+    </div>`).join('');
+  const me = ps.find((p) => p.id === myId);
+  const rb = $('readyBtn');
+  rb.classList.toggle('on', !!(me && me.ready));
+  rb.textContent = me && me.ready ? '✔ 준비완료! (취소하려면 누르기)' : '준비완료';
+  rb.disabled = l.state !== 'lobby';
+  $('lobbyStatus').textContent = l.state === 'playing' ? '게임이 진행 중이에요. 이번 판이 끝나면 함께 할 수 있어요.'
+    : l.countdown ? '곧 시작합니다!' : readyN === ps.length ? '' : `모두 준비완료를 누르면 시작해요 (${ps.length - readyN}명 남음)`;
+  if (l.countdown && l.state === 'lobby') {
+    $('countdown').classList.add('on');
+    const n = $('cdNum');
+    if (n.textContent !== String(l.countdown)) { n.textContent = l.countdown; n.style.animation = 'none'; void n.offsetWidth; n.style.animation = ''; }
+  } else $('countdown').classList.remove('on');
+});
+
+// ───── 게임 시작/상태/종료 ─────
+socket.on('start', (s) => {
+  const me = s.players.find((p) => p.id === myId);
+  G = {
+    planets: s.planets.map(([id, x, y, size, r]) => ({ id, x, y, size, r })),
+    players: s.players,
+    myPi: me ? me.pi : -1,
+  };
+  state = null; prevFleets = new Map(); selection.clear();
+  inGame = true;
+  $('countdown').classList.remove('on'); $('results').classList.remove('on');
+  $('feed').innerHTML = ''; $('banner').style.display = 'none';
+  show('game'); resize(); fitCamera(true);
+});
+socket.on('state', (s) => {
+  if (!inGame || !G) return;
+  prevFleets = new Map();
+  if (state) for (const f of state.f) prevFleets.set(f[0], f);
+  if (!s.al && state) s.al = state.al;
+  state = s; stateTime = performance.now();
+  updateHud();
+});
+socket.on('elim', (e) => {
+  if (!inGame) return;
+  const el = document.createElement('div');
+  el.innerHTML = `💥 <span style="color:hsl(${e.hue},90%,70%)">${esc(e.name)}</span> 탈락`;
+  $('feed').prepend(el);
+  while ($('feed').children.length > 4) $('feed').lastChild.remove();
+  setTimeout(() => el.remove(), 5000);
+});
+socket.on('gameover', (g) => {
+  inGame = false; selection.clear();
+  show(myCode ? 'lobby' : 'home');
+  const list = g.ranking, medal = ['🥇', '🥈', '🥉'];
+  const mine = list.find((r) => r.id === myId);
+  $('resTitle').textContent = list.length ? `🏆 ${list[0].name} 승리!` : '게임 종료';
+  $('resSub').textContent = (g.timeUp ? '시간 종료! (남은 세력 점수로 순위) ' : '') + (mine ? `내 순위: ${mine.rank}위 / ${list.length}명` : '');
+  $('rankList').innerHTML = list.map((r) => `
+    <div class="rk ${r.id === myId ? 'me' : ''}">
+      <span class="no">${medal[r.rank - 1] || r.rank}</span>
+      <span style="width:12px;height:12px;border-radius:50%;background:hsl(${r.hue},90%,65%)"></span>
+      <span class="nm">${esc(r.name)}</span>
+      <span class="sc">${r.alive ? `행성 ${r.planets} · 점수 ${r.score}` : '탈락'}</span>
+    </div>`).join('');
+  $('results').classList.add('on');
+});
+$('resOk').onclick = () => $('results').classList.remove('on');
+socket.on('disconnect', () => {
+  toast('서버와 연결이 끊겼어요. 다시 입장해 주세요.');
+  inGame = false; myCode = null; lobby = null; $('countdown').classList.remove('on'); show('home');
+});
+
+function updateHud() {
+  const s = state;
+  const m = Math.floor(s.tl / 60), sec = s.tl % 60;
+  $('hTime').textContent = `${m}:${String(sec).padStart(2, '0')}`;
+  $('hTime').style.color = s.tl <= 30 ? 'var(--danger)' : '';
+  const stats = G.players.map((pl) => ({ pl, planets: 0, units: 0, alive: s.al ? s.al[pl.pi] : 1 }));
+  s.p.forEach((pp) => { if (pp[0] >= 0) { stats[pp[0]].planets++; stats[pp[0]].units += pp[2]; } });
+  s.f.forEach((f) => { stats[f[1]].units += f[2]; });
+  const sorted = stats.slice().sort((a, b) => (b.alive - a.alive) || (b.planets - a.planets) || (b.units - a.units));
+  $('plBox').innerHTML = sorted.slice(0, 12).map((x) => `
+    <div class="pr ${x.alive ? '' : 'dead'} ${x.pl.pi === G.myPi ? 'me' : ''}">
+      <span class="d" style="background:hsl(${x.pl.hue},90%,65%)"></span><span class="n">${esc(x.pl.name)}</span>
+      <span>🪐${x.planets} · ${x.units}</span></div>`).join('');
+  const me = stats[G.myPi];
+  if (me) {
+    $('hudMe').innerHTML = `<span class="big" style="color:hsl(${me.pl.hue},90%,70%)">●</span> 행성 <span class="big">${me.planets}</span> · 유닛 <span class="big">${me.units}</span>`;
+    $('banner').style.display = me.alive ? 'none' : 'block';
+  } else {
+    $('hudMe').innerHTML = '👀 관전 중';
+  }
+}
+
+// ───── 카메라 ─────
+const cv = $('cv'), ctx = cv.getContext('2d');
+let W = 0, H = 0, dpr = 1;
+const cam = { x: 0, y: 0, z: 1 };
+function resize() {
+  dpr = Math.min(window.devicePixelRatio || 1, 2);
+  W = window.innerWidth; H = window.innerHeight;
+  cv.width = Math.round(W * dpr); cv.height = Math.round(H * dpr);
+}
+window.addEventListener('resize', () => { resize(); if (inGame) fitCamera(true); });
+function fitCamera() {
+  if (!G) return;
+  let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
+  for (const p of G.planets) { x0 = Math.min(x0, p.x - p.r); x1 = Math.max(x1, p.x + p.r); y0 = Math.min(y0, p.y - p.r); y1 = Math.max(y1, p.y + p.r); }
+  const pad = 90;
+  cam.x = (x0 + x1) / 2; cam.y = (y0 + y1) / 2;
+  cam.z = Math.min(W / (x1 - x0 + pad * 2), H / (y1 - y0 + pad * 2));
+  cam.z = Math.max(0.15, Math.min(cam.z, 1.6));
+}
+$('fitBtn').onclick = () => fitCamera();
+const toScreen = (x, y) => [(x - cam.x) * cam.z + W / 2, (y - cam.y) * cam.z + H / 2];
+const toWorld = (sx, sy) => [(sx - W / 2) / cam.z + cam.x, (sy - H / 2) / cam.z + cam.y];
+
+// ───── 유닛 점 위치 (행성 주위를 도는 유닛) ─────
+const MAX_DOTS = 240;
+function orbitDot(p, k, t) {
+  const ring = k % 4;
+  const dir = p.id % 2 ? 1 : -1;
+  const a = k * 2.39996 + t * (0.35 + ring * 0.06) * dir;
+  const rad = p.r + 10 + ring * 7 + ((k * 7) % 5);
+  return [p.x + Math.cos(a) * rad, p.y + Math.sin(a) * rad];
+}
+
+// ───── 선택 / 입력 ─────
+// selection: 행성id → 선택된 유닛 점 번호들(Set)
+const selection = new Map();
+function selCount() {
+  let n = 0;
+  for (const [pid, set] of selection) { const gar = state ? state.p[pid][2] : 0; for (const k of set) if (k < gar) n++; }
+  return n;
+}
+const pointers = new Map();
+let lasso = null, panStart = null, pinch = null, mouseNow = { x: 0, y: 0 };
+
+function planetAt(sx, sy) {
+  const [wx, wy] = toWorld(sx, sy);
+  let best = null, bd = Infinity;
+  for (const p of G.planets) {
+    const d = Math.hypot(p.x - wx, p.y - wy);
+    const hit = Math.max(p.r + 14, 26 / cam.z);
+    if (d < hit && d < bd) { bd = d; best = p; }
+  }
+  return best;
+}
+function pointInPoly(x, y, poly) {
+  let inside = false;
+  for (let i = 0, j = poly.length - 1; i < poly.length; j = i++) {
+    const xi = poly[i][0], yi = poly[i][1], xj = poly[j][0], yj = poly[j][1];
+    if ((yi > y) !== (yj > y) && x < ((xj - xi) * (y - yi)) / (yj - yi) + xi) inside = !inside;
+  }
+  return inside;
+}
+function finishLasso(path, additive) {
+  if (!state) return;
+  if (!additive) selection.clear();
+  const t = performance.now() / 1000;
+  G.planets.forEach((p, i) => {
+    const pp = state.p[i];
+    if (pp[0] !== G.myPi || pp[2] <= 0) return;
+    const n = Math.min(pp[2], MAX_DOTS);
+    let set = selection.get(p.id);
+    for (let k = 0; k < n; k++) {
+      const [wx, wy] = orbitDot(p, k, t);
+      const [sx, sy] = toScreen(wx, wy);
+      if (pointInPoly(sx, sy, path)) { if (!set) { set = new Set(); selection.set(p.id, set); } set.add(k); }
+    }
+    // 화면에 그려지는 점보다 유닛이 많으면, 선택 비율만큼 나머지도 포함
+    if (set && pp[2] > MAX_DOTS) {
+      const extra = Math.round((set.size / n) * (pp[2] - n));
+      for (let k = n; k < n + extra; k++) set.add(k);
+    }
+  });
+}
+function selectAllOf(p) {
+  const gar = state.p[p.id][2];
+  if (gar <= 0) return;
+  const set = new Set();
+  for (let k = 0; k < gar; k++) set.add(k);
+  selection.set(p.id, set);
+}
+function sendSelectionTo(target) {
+  const src = [];
+  for (const [pid, set] of selection) {
+    const pp = state.p[pid];
+    if (pp[0] !== G.myPi) continue;
+    let n = 0;
+    for (const k of set) if (k < pp[2]) n++;
+    if (n > 0) src.push([pid, n]);
+  }
+  if (src.length) socket.emit('send', { to: target.id, src });
+  selection.clear();
+}
+function onTap(sx, sy, shift) {
+  if (!state || G.myPi < 0) return;
+  const p = planetAt(sx, sy);
+  if (selCount() > 0) {
+    if (p) sendSelectionTo(p); else selection.clear();
+    return;
+  }
+  if (p && state.p[p.id][0] === G.myPi) { if (!shift) selection.clear(); selectAllOf(p); }
+}
+
+cv.addEventListener('contextmenu', (e) => e.preventDefault());
+cv.addEventListener('pointerdown', (e) => {
+  cv.setPointerCapture(e.pointerId);
+  pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+  if (pointers.size === 2) {                       // 두 손가락: 이동/확대
+    lasso = null;
+    const [a, b] = [...pointers.values()];
+    pinch = { d: Math.hypot(a.x - b.x, a.y - b.y), cx: (a.x + b.x) / 2, cy: (a.y + b.y) / 2, z: cam.z, camX: cam.x, camY: cam.y };
+    return;
+  }
+  if (e.button === 2 || e.button === 1) { panStart = { x: e.clientX, y: e.clientY, camX: cam.x, camY: cam.y }; return; }
+  if (e.button === 0) lasso = { path: [[e.clientX, e.clientY]], shift: e.shiftKey };
+});
+cv.addEventListener('pointermove', (e) => {
+  mouseNow = { x: e.clientX, y: e.clientY };
+  if (!pointers.has(e.pointerId)) return;
+  pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+  if (pinch && pointers.size >= 2) {
+    const [a, b] = [...pointers.values()];
+    const d = Math.hypot(a.x - b.x, a.y - b.y), cx = (a.x + b.x) / 2, cy = (a.y + b.y) / 2;
+    cam.z = Math.max(0.12, Math.min(3, pinch.z * (d / pinch.d)));
+    cam.x = pinch.camX - (cx - pinch.cx) / cam.z;
+    cam.y = pinch.camY - (cy - pinch.cy) / cam.z;
+    return;
+  }
+  if (panStart) { cam.x = panStart.camX - (e.clientX - panStart.x) / cam.z; cam.y = panStart.camY - (e.clientY - panStart.y) / cam.z; return; }
+  if (lasso) {
+    const last = lasso.path[lasso.path.length - 1];
+    if (Math.hypot(e.clientX - last[0], e.clientY - last[1]) > 4) lasso.path.push([e.clientX, e.clientY]);
+  }
+});
+function endPointer(e) {
+  pointers.delete(e.pointerId);
+  if (pinch) { if (pointers.size < 2) pinch = null; lasso = null; return; }
+  if (panStart) { panStart = null; return; }
+  if (!lasso) return;
+  const path = lasso.path;
+  let len = 0;
+  for (let i = 1; i < path.length; i++) len += Math.hypot(path[i][0] - path[i - 1][0], path[i][1] - path[i - 1][1]);
+  if (len < 15) onTap(e.clientX, e.clientY, lasso.shift);
+  else if (G.myPi >= 0) finishLasso(path, lasso.shift);
+  lasso = null;
+}
+cv.addEventListener('pointerup', endPointer);
+cv.addEventListener('pointercancel', (e) => { pointers.delete(e.pointerId); lasso = null; pinch = null; panStart = null; });
+cv.addEventListener('wheel', (e) => {
+  e.preventDefault();
+  const [wx, wy] = toWorld(e.clientX, e.clientY);
+  cam.z = Math.max(0.12, Math.min(3, cam.z * Math.exp(-e.deltaY * 0.0015)));
+  cam.x = wx - (e.clientX - W / 2) / cam.z;
+  cam.y = wy - (e.clientY - H / 2) / cam.z;
+}, { passive: false });
+window.addEventListener('keydown', (e) => { if (e.key === 'Escape') selection.clear(); });
+
+// ───── 그리기 ─────
+const hueOf = (pi) => (pi >= 0 && G.players[pi] ? G.players[pi].hue : 0);
+function arc(x, y, r, frac, color, width) {
+  if (frac <= 0) return;
+  ctx.strokeStyle = color; ctx.lineWidth = width;
+  ctx.beginPath(); ctx.arc(x, y, r, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * Math.min(1, frac)); ctx.stroke();
+}
+
+function frame() {
+  requestAnimationFrame(frame);
+  if (!inGame || !G) return;
+  const t = performance.now() / 1000;
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  ctx.clearRect(0, 0, W, H);
+  ctx.save();
+  ctx.translate(W / 2, H / 2); ctx.scale(cam.z, cam.z); ctx.translate(-cam.x, -cam.y);
+  const px = 1 / cam.z;   // 화면 1px의 월드 크기
+  const s = state;
+
+  // 행성
+  for (const p of G.planets) {
+    const pp = s ? s.p[p.id] : [-1, 1, 0, 0, 0, 0, -1];
+    const [owner, level, gar, hp, up, cap, capBy] = pp;
+    const hue = hueOf(owner);
+    const glow = ctx.createRadialGradient(p.x, p.y, p.r * 0.3, p.x, p.y, p.r * 2.4);
+    glow.addColorStop(0, owner >= 0 ? `hsla(${hue},90%,60%,0.35)` : 'rgba(160,170,210,0.12)');
+    glow.addColorStop(1, 'rgba(0,0,0,0)');
+    ctx.fillStyle = glow; ctx.beginPath(); ctx.arc(p.x, p.y, p.r * 2.4, 0, Math.PI * 2); ctx.fill();
+
+    ctx.fillStyle = owner >= 0 ? `hsl(${hue},60%,22%)` : '#1b1f36';
+    ctx.beginPath(); ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2); ctx.fill();
+    // 최대 레벨(크기)만큼 고리, 현재 레벨까지 밝게
+    for (let L = 1; L <= p.size; L++) {
+      const rr = p.r * (L / p.size) - 2;
+      ctx.strokeStyle = L <= level && owner >= 0 ? `hsl(${hue},95%,68%)` : 'rgba(170,180,230,0.25)';
+      ctx.lineWidth = Math.max(2, 2.5);
+      ctx.beginPath(); ctx.arc(p.x, p.y, Math.max(3, rr), 0, Math.PI * 2); ctx.stroke();
+    }
+    // 진행도 표시
+    if (owner >= 0) {
+      const hm = hpMax(level);
+      if (hp < hm) { arc(p.x, p.y, p.r + 5, 1, 'rgba(255,255,255,0.12)', 3); arc(p.x, p.y, p.r + 5, hp / hm, `hsl(${hue},95%,70%)`, 3); }
+      if (level < p.size && up > 0) arc(p.x, p.y, p.r + 5, up / upCost(level), 'rgba(255,255,255,0.85)', 3);
+    } else if (capBy >= 0 && cap > 0) {
+      arc(p.x, p.y, p.r + 5, 1, 'rgba(255,255,255,0.12)', 3);
+      arc(p.x, p.y, p.r + 5, cap / capCost(p.size), `hsl(${hueOf(capBy)},95%,70%)`, 4);
+    }
+    // 텍스트: 유닛 수 / 중립은 점령 비용
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.font = `bold ${Math.round(Math.max(13, 13 * px))}px system-ui, sans-serif`;
+    ctx.fillStyle = owner >= 0 ? '#fff' : 'rgba(200,205,235,0.75)';
+    ctx.fillText(owner >= 0 ? String(gar) : `${capBy >= 0 ? cap : 0}/${capCost(p.size)}`, p.x, p.y);
+
+    // 주둔 유닛 점
+    if (owner >= 0 && gar > 0) {
+      const n = Math.min(gar, MAX_DOTS);
+      const set = owner === G.myPi ? selection.get(p.id) : null;
+      const dotR = Math.max(2.2, 1.6 * px);
+      ctx.fillStyle = `hsl(${hue},95%,72%)`;
+      for (let k = 0; k < n; k++) {
+        if (set && set.has(k)) continue;
+        const [x, y] = orbitDot(p, k, t);
+        ctx.fillRect(x - dotR, y - dotR, dotR * 2, dotR * 2);
+      }
+      if (set && set.size) {
+        ctx.fillStyle = '#fff';
+        for (const k of set) {
+          if (k >= n) continue;
+          const [x, y] = orbitDot(p, k, t);
+          ctx.beginPath(); ctx.arc(x, y, dotR * 1.5, 0, Math.PI * 2); ctx.fill();
+        }
+      }
+    }
+  }
+
+  // 이동 중인 유닛 (부드럽게 보간)
+  if (s) {
+    const a = Math.min(1, (performance.now() - stateTime) / 50);
+    const dotR = Math.max(2.2, 1.6 * px);
+    for (const f of s.f) {
+      const [id, owner, n, fx, fy] = f;
+      const pv = prevFleets.get(id);
+      const x = pv ? pv[3] + (fx - pv[3]) * a : fx, y = pv ? pv[4] + (fy - pv[4]) * a : fy;
+      ctx.fillStyle = `hsl(${hueOf(owner)},95%,72%)`;
+      const m = Math.min(n, 200);
+      for (let k = 0; k < m; k++) {
+        const ang = k * 2.39996 + t * 1.5, rad = 2.6 * Math.sqrt(k);
+        ctx.fillRect(x + Math.cos(ang) * rad - dotR, y + Math.sin(ang) * rad - dotR, dotR * 2, dotR * 2);
+      }
+    }
+  }
+  ctx.restore();
+
+  // 올가미(선택 동그라미)
+  if (lasso && lasso.path.length > 1) {
+    ctx.strokeStyle = 'rgba(255,255,255,0.8)'; ctx.fillStyle = 'rgba(143,180,255,0.12)'; ctx.lineWidth = 2;
+    ctx.setLineDash([6, 5]);
+    ctx.beginPath(); ctx.moveTo(lasso.path[0][0], lasso.path[0][1]);
+    for (const q of lasso.path) ctx.lineTo(q[0], q[1]);
+    ctx.closePath(); ctx.fill(); ctx.stroke(); ctx.setLineDash([]);
+  }
+  // 선택 개수 + 목적지 표시
+  const sc = selCount();
+  if (sc > 0) {
+    const hp = planetAt(mouseNow.x, mouseNow.y);
+    if (hp) {
+      const [hx, hy] = toScreen(hp.x, hp.y);
+      ctx.strokeStyle = 'rgba(255,255,255,0.7)'; ctx.lineWidth = 2; ctx.setLineDash([4, 4]);
+      ctx.beginPath(); ctx.arc(hx, hy, (hp.r + 16) * cam.z, 0, Math.PI * 2); ctx.stroke(); ctx.setLineDash([]);
+    }
+    ctx.font = 'bold 14px system-ui, sans-serif'; ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
+    ctx.fillStyle = '#fff';
+    ctx.fillText(`선택 ${sc}`, mouseNow.x + 14, mouseNow.y + 16);
+  }
+}
+requestAnimationFrame(frame);
+})();
+</script>
+</body>
+</html>
